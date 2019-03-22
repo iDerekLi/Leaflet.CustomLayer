@@ -1,5 +1,5 @@
 {
-  "name": "leaflet-customLayer",
+  "name": "leaflet-customlayer",
   "version": "1.0.0",
   "description": "Leaflet overlay plugin: L.CustomLayer - fully custom Layer.",
   "author": "Derek Li",
