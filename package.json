@@ -1,0 +1,61 @@
+{
+  "name": "leaflet-customLayer",
+  "version": "1.0.0",
+  "description": "Leaflet overlay plugin: L.CustomLayer - fully custom Layer.",
+  "author": "Derek Li",
+  "scripts": {
+    "dev": "rollup -w --config rollup.config.js",
+    "build": "rollup --config rollup.config.js"
+  },
+  "main": "dist/Leaflet.CustomLayer.js",
+  "module": "dist/Leaflet.CustomLayer.esm.js",
+  "files": [
+    "dist",
+    "src",
+    "LICENSE",
+    "README.md",
+    "package.json"
+  ],
+  "keywords": [
+    "leaflet",
+    "map",
+    "canvas",
+    "svg",
+    "image",
+    "video",
+    "overlay",
+    "leaflet-plugin"
+  ],
+  "homepage": "https://github.com/iDerekLi/Leaflet.CustomLayer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iDerekLi/Leaflet.CustomLayer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/iDerekLi/Leaflet.CustomLayer/issues"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.2.2",
+    "@babel/plugin-external-helpers": "^7.2.0",
+    "@babel/polyfill": "^7.2.5",
+    "@babel/preset-env": "^7.3.1",
+    "babel-eslint": "^10.0.1",
+    "babel-preset-es2015-rollup": "^3.0.0",
+    "eslint": "^5.12.1",
+    "eslint-config-prettier": "^4.0.0",
+    "eslint-plugin-prettier": "^3.0.1",
+    "prettier": "^1.16.2",
+    "rollup": "^1.1.2",
+    "rollup-plugin-babel": "^4.3.2",
+    "rollup-plugin-commonjs": "^9.2.0",
+    "rollup-plugin-eslint": "^5.0.0",
+    "rollup-plugin-json": "^3.1.0",
+    "rollup-plugin-node-resolve": "^4.0.0",
+    "rollup-plugin-terser": "^4.0.3",
+    "rollup-watch": "^4.3.1"
+  },
+  "peerDependencies": {
+    "leaflet": "^1.4.0"
+  }
+}

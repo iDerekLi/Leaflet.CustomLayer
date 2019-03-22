@@ -1,0 +1,23 @@
+language: node_js
+
+node_js:
+    - "10"
+sudo: false
+
+branches:
+  only:
+    - master
+
+cache:
+  yarn: true
+  directories:
+    - node_modules
+
+install:
+  - yarn
+
+script:
+  - yarn build
+
+
+
