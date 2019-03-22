@@ -132,27 +132,7 @@ class CustomLayer extends (L.Layer ? L.Layer : L.Class) {
 
     const el = this.getElement();
 
-    const size = this._map.getSize();
-    this._setElementSize(size);
-
-    this.setOpacity(this.options.opacity);
-    this.setZIndex(this.options.zIndex);
-
-    const animated = this._map.options.zoomAnimation && L.Browser.any3d;
-    L.DomUtil.addClass(el, "leaflet-layer");
-    L.DomUtil.addClass(el, `leaflet-zoom-${animated ? "animated" : "hide"}`);
-
-    if (!this._registerEvents) {
-      this._map.on(this.getEvents(), this);
-    }
-
-    if (!this.options.visible) {
-      console.log(this.options.visible);
-      this._map.off(this.getEvents(), this);
-      return;
-    }
-
-    this._map.getPanes().overlayPane.appendChild(el);
+    this._addElement(el);
 
     this.layerDidMount && this.layerDidMount.bind(this)();
 
@@ -166,14 +146,7 @@ class CustomLayer extends (L.Layer ? L.Layer : L.Class) {
   onRemove(map) {
     this.layerWillUnmount && this.layerWillUnmount.bind(this)();
 
-    if (this._frame) {
-      L.Util.cancelAnimFrame(this._frame);
-      this._frame = null;
-    }
-
-    try {
-      this._map.getPanes().overlayPane.removeChild(this.getElement());
-    } catch (e) {}
+    this._removeElement(this.getElement());
 
     if (this._registerEvents) {
       this._registerEvents = false;
@@ -276,6 +249,42 @@ class CustomLayer extends (L.Layer ? L.Layer : L.Class) {
     return this;
   }
 
+  _addElement(el) {
+    console.log(el);
+
+    const size = this._map.getSize();
+    this._setElementSize(size);
+
+    this.setOpacity(this.options.opacity);
+    this.setZIndex(this.options.zIndex);
+
+    const animated = this._map.options.zoomAnimation && L.Browser.any3d;
+    L.DomUtil.addClass(el, "leaflet-layer");
+    L.DomUtil.addClass(el, `leaflet-zoom-${animated ? "animated" : "hide"}`);
+
+    if (!this._registerEvents) {
+      this._map.on(this.getEvents(), this);
+    }
+
+    if (!this.options.visible) {
+      this._map.off(this.getEvents(), this);
+      return;
+    }
+
+    this._map.getPanes().overlayPane.appendChild(el);
+  }
+
+  _removeElement(el) {
+    if (this._frame) {
+      L.Util.cancelAnimFrame(this._frame);
+      this._frame = null;
+    }
+
+    try {
+      this._map.getPanes().overlayPane.removeChild(el);
+    } catch (e) {}
+  }
+
   _setElementSize(size) {
     const element = this.getElement();
     element.setAttribute("width", size.x);
@@ -366,7 +375,15 @@ class CustomLayer extends (L.Layer ? L.Layer : L.Class) {
   }
 
   setElement(element) {
+    let oldEl = this.getElement();
     this.options.el = element;
+
+    this._removeElement(oldEl);
+    this._addElement(element);
+
+    this._setElementPosition();
+    this._render();
+    return element;
   }
 
   getOpacity() {

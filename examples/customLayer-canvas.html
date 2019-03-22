@@ -60,6 +60,7 @@
   // 生命周期-渲染钩子
   canvasLayer.layerRender = function() {
     console.log("layerRender");
+    console.log(this.getElement(), 1);
     drawCanvas(this.getElement());
   };
   // 生命周期-图层移除前

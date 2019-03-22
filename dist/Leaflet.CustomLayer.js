@@ -185,23 +185,14 @@
             key: "onAdd",
             value: function onAdd(e) {
                 this._map = e;
-                var o = this.getElement(), i = this._map.getSize();
-                this._setElementSize(i), this.setOpacity(this.options.opacity), this.setZIndex(this.options.zIndex);
-                var n = this._map.options.zoomAnimation && t.Browser.any3d;
-                if (t.DomUtil.addClass(o, "leaflet-layer"), t.DomUtil.addClass(o, "leaflet-zoom-".concat(n ? "animated" : "hide")), 
-                this._registerEvents || this._map.on(this.getEvents(), this), !this.options.visible) return console.log(this.options.visible), 
-                void this._map.off(this.getEvents(), this);
-                this._map.getPanes().overlayPane.appendChild(o), this.layerDidMount && this.layerDidMount.bind(this)(), 
-                this.options.visible || this.hide(), this._needRedraw();
+                var t = this.getElement();
+                this._addElement(t), this.layerDidMount && this.layerDidMount.bind(this)(), this.options.visible || this.hide(), 
+                this._needRedraw();
             }
         }, {
             key: "onRemove",
             value: function onRemove(e) {
-                this.layerWillUnmount && this.layerWillUnmount.bind(this)(), this._frame && (t.Util.cancelAnimFrame(this._frame), 
-                this._frame = null);
-                try {
-                    this._map.getPanes().overlayPane.removeChild(this.getElement());
-                } catch (o) {}
+                this.layerWillUnmount && this.layerWillUnmount.bind(this)(), this._removeElement(this.getElement()), 
                 this._registerEvents && (this._registerEvents = !1, this._map.off(this.getEvents(), this)), 
                 this._map.off({
                     zoom: this._onZoomVisible
@@ -278,6 +269,24 @@
                 this;
             }
         }, {
+            key: "_addElement",
+            value: function _addElement(e) {
+                console.log(e);
+                var o = this._map.getSize();
+                this._setElementSize(o), this.setOpacity(this.options.opacity), this.setZIndex(this.options.zIndex);
+                var i = this._map.options.zoomAnimation && t.Browser.any3d;
+                t.DomUtil.addClass(e, "leaflet-layer"), t.DomUtil.addClass(e, "leaflet-zoom-".concat(i ? "animated" : "hide")), 
+                this._registerEvents || this._map.on(this.getEvents(), this), this.options.visible ? this._map.getPanes().overlayPane.appendChild(e) : this._map.off(this.getEvents(), this);
+            }
+        }, {
+            key: "_removeElement",
+            value: function _removeElement(e) {
+                this._frame && (t.Util.cancelAnimFrame(this._frame), this._frame = null);
+                try {
+                    this._map.getPanes().overlayPane.removeChild(e);
+                } catch (o) {}
+            }
+        }, {
             key: "_setElementSize",
             value: function _setElementSize(e) {
                 var t = this.getElement();
@@ -344,7 +353,9 @@
         }, {
             key: "setElement",
             value: function setElement(e) {
-                this.options.el = e;
+                var t = this.getElement();
+                return this.options.el = e, this._removeElement(t), this._addElement(e), this._setElementPosition(), 
+                this._render(), e;
             }
         }, {
             key: "getOpacity",
