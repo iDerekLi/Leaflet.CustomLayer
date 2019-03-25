@@ -12,6 +12,10 @@ Leaflet overlay plugin: L.CustomLayer - fully custom Layer.
 - A custom layer is a layer that develops a defined drawing method.
   (For example: Canvas\SVG\Image\Video\DIV Layer)
 
+![Screenshot canvasLayer](/screenshots/canvasLayer.jpg?raw=true)
+
+![Screenshot svgLayerLayer](/screenshots/svgLayer.jpg?raw=true)
+
 ## Installation
 
 Using npm:
@@ -29,81 +33,87 @@ $ yarn add leaflet-customlayer
 Using cdn:
 
 ```html
-<script type="text/javascript" src="https://unpkg.com/leaflet-customlayer@1.0.0/dist/Leaflet.CustomLayer.js"></script>
+<script type="text/javascript" src="https://unpkg.com/leaflet-customlayer@2.0.0/dist/Leaflet.CustomLayer.js"></script>
 ```
 
 ## Example
 
 ```javascript
 var customLayer = new L.customLayer({
-  el: document.createElement(element), // The DomElement object to display
-  zooms: [0, 18], // Set the visibility level, [min, max]
-  opacity: 1, // The opacity of the layer, [0,1]
-  visible: true, // Is the layer visible
-  zIndex: 120, // The zIndex of the layer 
-  alwaysRender: true // Whether to redraw during zoom panning, complex drawing suggestions are set to false
+  container: document.createElement(element), // The DomElement object to display.
+  minZoom: 0, // Minimum zoom level of the layer.
+  maxZoom: 18, // Maximum zoom level of the layer.
+  opacity: 1, // Opacity of the layer.
+  visible: true, // Visible of the layer.
+  zIndex: 100 // The explicit zIndex of the layer.
 });
 
-customLayer.layerWillMount = function() {
-  console.log("layerWillMount");
-};
+customLayer.on("layer-beforemount", function() {
+  console.log("layerBeforeMount");
+});
 
-customLayer.layerDidMount = function() {
-  console.log("layerDidMount");
-};
+customLayer.on("layer-mounted", function() {
+  console.log("layerMounted");
+})
 
-customLayer.layerRender = function() {
+customLayer.on("layer-render", function() {
   console.log("layerRender");
-};
+});
 
-customLayer.layerWillUnmount = function() {
-  console.log("WillUnmount");
-};
+customLayer.on("layer-beforedestroy", function() {
+  console.log("layerBeforeDestroy");
+});
 
-customLayer.layerDidUnmount = function() {
-  console.log("DidUnmount");
-}
+customLayer.on("layer-destroyed", function() {
+  console.log("layerDestroyed");
+});
 
 customLayer.addTo(map);
 ```
 
 ## API
 
-### Options
+### CustomLayer
+
+Leaflet overlay plugin: L.CustomLayer - fully custom Layer. Extends [Layer](https://leafletjs.com/reference-1.4.0.html#layer).
+
+#### Options
 
 | Option | Description | Type | Default |
 | :------ | :------ | :------ | :------ |
-| el | The DomElement object to display. | DomElement | - |
-| zooms | Set the visibility level, [min, max]. | Array | [0, 18] |
-| opacity | The opacity of the layer, [0, 1] | Number | 1 |
-| visible | Is the layer visible. | Boolean | true |
-| zIndex | The zIndex of the layer. | Nunber | 120 |
-| alwaysRender | Whether to redraw during zoom panning, complex drawing suggestions are set to false | Boolean | true |
+| container | The DomElement object to display. | DomElement | - |
+| minZoom | Minimum zoom level of the layer. | Number | * |
+| maxZoom | Maximum zoom level of the layer. | Number | * |
+| opacity | Opacity of the layer. | Number | 1 |
+| visible | Visible of the layer. | Boolean | true |
+| zIndex | The explicit zIndex of the layer. | Number | canvas: 100\ svg: 200\ other: 100 |
+| padding | How much to extend the clip area around the map view (relative to its size) e.g. 0.1 would be 10% of map view in each direction. | Number | 0 |
+| tolerance | How much to extend click tolerance round a path/object on the map. | Number | 0 |
 
-### Methods
+#### Methods
 
 | Method | Description | Return |
 | :------ | :------ | :------ |
 | addTo() | layer add to the map  |  |
 | remove() | layer remove the map  |  |
-| getElement() | Get the DomElement object | DomElement |
-| setElement() | Set the DomElement object |  |
+| getContainer() | Get the DomElement object | DomElement |
+| setContainer(container) | Set the DomElement object | this |
 | getOpacity() | Get the opacity of the layer. | Number |
-| setOpacity() | Set the opacity of the layer. |  |
+| setOpacity(<Number>opacity) | Set the opacity of the layer. | this |
 | getZIndex() | Get the zIndex of the layer. | Number |
-| setZIndex() | Set the zIndex of the layer. |  |
-| show() | layer show | - |
-| hide() | layer hide | - |
+| setZIndex(<Number>zIndex) | Set the zIndex of the layer. | this |
+| show() | layer show | this |
+| hide() | layer hide | this |
 
-### Lifecycle
+#### Events
 
-| Name | Description |
-| :------ | :------ |
-| layerWillMount | before adding a layer |
-| layerDidMount | after the layer is added |
-| layerRender | render |
-| layerWillUnmount | before layer removal |
-| layerDidUnmount | layer has been removed |
+| Event | Data | Description |
+| :------ | :------ | :------ |
+| layer-beforemount | Event | Fired before the layer is mounting begins. |
+| layer-mounted | Event | Fired after the layer is has been mounted. |
+| layer-render | Event | Fired when the layer render its bounds, center and zoom, for example when its map has moved. |
+| layer-beforedestroy | Event | Fired before the layer is destroyed. |
+| layer-destroyed | Event | Fired after the layer is has been destroyed. |
 
 ## License
 
