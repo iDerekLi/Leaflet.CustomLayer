@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Leaflet customLayer-svg 1.4.0</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"></script>
+  <style>
+    body {
+      margin: 0;
+    }
+    #map {
+      width: 100vw;
+      height: 100vh;
+    }
+    @keyframes leaflet-ant-path-animation {
+      from {
+        stroke-dashoffset: 100%;
+      }
+      to {
+        stroke-dashoffset: 0%;
+      }
+    }
+    .leaflet-ant-path {
+      fill: none;
+      animation: linear infinite leaflet-ant-path-animation;
+    }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<div width="500" height="800" style="background: #000;"></div>
+<script src="../dist/Leaflet.CustomLayer.js"></script>
+<script src="./data/lines.js"></script>
+
+<script>
+  var map = L.map("map", {
+    zoomAnimation: true
+  }).setView([36.8, 108.34], 4);
+
+  L.tileLayer("https://{s}.tiles.mapbox.com/v4/mapbox.dark/{z}/{x}/{y}@2x.png?access_token=pk.eyJ1IjoiZ2xlYWZsZXQiLCJhIjoiY2lxdWxoODl0MDA0M2h4bTNlZ2I1Z3gycyJ9.vrEWCC2nwsGfAYKZ7c4HZA")
+    .addTo(map);
+
+  function svgDOMUtil(tag, attrs = {}) {
+    var el;
+    if (typeof tag === "string") {
+      el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    } else {
+      el = tag;
+    }
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  let data = lines;
+
+  function addItem() {
+    let g = svgDOMUtil("g");
+
+    let path = svgDOMUtil("path");
+    L.DomUtil.addClass(path, "leaflet-ant-path");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke", "#F7EB0A");
+    path.setAttribute("stroke-dasharray", "4, 6");
+    path.setAttribute("stroke-width", 3);
+    path.setAttribute("fill", "none");
+    path.setAttribute("d", "");
+    path.style["animation-duration"] = "100s";
+
+    let arrow = svgDOMUtil("polygon");
+    arrow.setAttribute("stroke", "none");
+    arrow.setAttribute("fill", "#F7EB0A");
+    arrow.setAttribute("stroke-width", 0);
+    arrow.setAttribute("points", "");
+    arrow.setAttribute("transform", "");
+
+    g.appendChild(path);
+    g.appendChild(arrow);
+
+    return {
+      g,
+      path,
+      arrow
+    };
+  }
+
+  function getLinePath(d, option) {
+    let p1 = this._map.latLngToContainerPoint({
+      lat: d.coords[0][1],
+      lng: d.coords[0][0]
+    });
+    let p2 = this._map.latLngToContainerPoint({
+      lat: d.coords[1][1],
+      lng: d.coords[1][0]
+    });
+
+    let L = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+    let zx = p1.x - L / option.q;
+    let zy = p1.y - L / 2;
+    let angle = (Math.PI / 180) * 90 + Math.atan2(p2.y - p1.y, p2.x - p1.x);
+    let qx =
+      (zx - p1.x) * Math.cos(angle) - (zy - p1.y) * Math.sin(angle) + p1.x;
+    let qy =
+      (zx - p1.x) * Math.sin(angle) + (zy - p1.y) * Math.cos(angle) + p1.y;
+    let arrawangle =
+      Math.atan2(qy - p2.y, qx - p2.x) - (Math.PI / 180) * 90;
+    return {
+      linepath: `M${p1.x},${p1.y} Q${qx},${qy} ${p2.x},${p2.y}`,
+      arrowpath: `${p2.x},${p2.y - 9} ${p2.x + 5},${p2.y + 5} ${
+        p2.x
+        },${p2.y + 2} ${p2.x - 5},${p2.y + 5}`,
+      rotate: `rotate(${(arrawangle * 180) / Math.PI},${p2.x},${p2.y})`
+    };
+  }
+
+  var canvasLayer = L.customLayer({
+    container: document.createElementNS("http://www.w3.org/2000/svg", "svg"),
+    opacity: 1,
+    visible: true,
+    zIndex: 120
+  });
+
+  canvasLayer.on("layer-beforemount", function() {
+    console.log("layer-beforemount");
+
+    this.group = svgDOMUtil("g");
+    this.source = {};
+  });
+
+
+  canvasLayer.on("layer-mounted", function() {
+    console.log("layer-mounted");
+
+    this.getContainer().appendChild(this.group);
+
+    data.forEach((item, index) => {
+      let $item = addItem(item, index);
+      this.source[index] = $item;
+      this.group.appendChild($item.g);
+    });
+  });
+
+  canvasLayer.on("layer-render", function() {
+    console.log("layer-render");
+
+    const container = this.getContainer();
+    var size = this._bounds.getSize(); // resize
+
+    container.setAttribute("width", size.x);
+    container.setAttribute("height", size.y);
+    container.style.width = size.x + "px";
+    container.style.height = size.y + "px";
+    container.setAttribute("viewBox", `0 0 ${size.x} ${size.y}`);
+
+    data.forEach((item, index) => {
+      const d = getLinePath.bind(this)(item, { q: item.value });
+
+      let $item = this.source[index];
+      $item.path.setAttribute("d", d.linepath);
+      $item.arrow.setAttribute("points", d.arrowpath);
+      $item.arrow.setAttribute("transform", d.rotate);
+    });
+  });
+
+  canvasLayer.on("layer-beforedestroy", function() {
+    console.log("layer-beforedestroy");
+  });
+
+  canvasLayer.on("layer-destroyed", function() {
+    console.log("layer-destroyed");
+  });
+
+  canvasLayer.addTo(map);
+</script>
+</body>
+</html>

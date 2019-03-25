@@ -1,432 +1,376 @@
 import L from "leaflet";
 
-/*
-// Exmaple
-var customLayer = new L.customLayer({
-  el: document.createElement(element), // The DomElement object to display
-  zooms: [0, 18], // Set the visibility level, [min, max]
-  opacity: 1, // The opacity of the layer, [0,1]
-  visible: true, // Is the layer visible
-  zIndex: 120, // The zIndex of the layer
-  alwaysRender: true // Whether to redraw during zoom panning, complex drawing suggestions are set to false
-});
+/**
+ * @class CustomLayer
+ * @inherits Layer
+ *
+ * Leaflet overlay plugin: L.CustomLayer - fully custom Layer.
+ */
+const CustomLayer = L.Layer.extend({
+  // CustomLayer options
+  options: {
+    // How much to extend the clip area around the map view (relative to its size)
+    // e.g. 0.1 would be 10% of map view in each direction
+    padding: 0,
 
-customLayer.layerWillMount = function() {
-  console.log("layerWillMount");
-};
+    // How much to extend click tolerance round a path/object on the map
+    tolerance: 0,
 
-customLayer.layerDidMount = function() {
-  console.log("layerDidMount");
-};
+    // The DomElement object to display
+    container: null,
 
-customLayer.layerRender = function() {
-  console.log("layerRender");
-};
+    // The opacity of the layer, [0,1]
+    opacity: 1,
 
-customLayer.layerWillUnmount = function() {
-  console.log("WillUnmount");
-};
+    // Is the layer visible
+    visible: true,
 
-customLayer.layerDidUnmount = function() {
-  console.log("DidUnmount");
-}
+    // The zIndex of the layer
+    zIndex: undefined,
 
-customLayer.addTo(map);
-*/
+    // Set the visibility min zoom level
+    minZoom: 0,
 
-class CustomLayer extends (L.Layer ? L.Layer : L.Class) {
-  constructor(definition) {
-    super(definition);
+    // Set the visibility max zoom level
+    maxZoom: 18
 
-    const _definition = {
-      el: null, // The DomElement object to display
-      zooms: [0, 18], // Set the visibility level, [min, max]
-      opacity: 1, // The opacity of the layer, [0,1]
-      visible: true, // Is the layer visible
-      zIndex: 120, // The zIndex of the layer
-      alwaysRender: true, // Whether to redraw during zoom panning, complex drawing suggestions are set to false
-      layerWillMount: null, // Lifecycle - before adding a layer
-      layerDidMount: null, // Lifecycle - after the layer is added
-      layerRender: null, // Lifecycle - render
-      layerWillUnmount: null, // Lifecycle - before layer removal
-      layerDidUnmount: null, // Lifecycle - layer has been removed
-      ...definition
-    };
+    // Whether to redraw during zoom panning, complex drawing suggestions are set to false (next version)
+    // alwaysRender: true
+  },
 
-    const _options = {
-      el: _definition.el,
-      opacity: _definition.opacity,
-      visible: _definition.visible,
-      zIndex: _definition.zIndex,
-      zooms: _definition.zooms,
-      alwaysRender: _definition.alwaysRender
-    };
-    L.setOptions(this, _options);
+  initialize(options) {
+    L.setOptions(this, options);
 
-    if (typeof _definition.layerWillMount === "function") {
-      this.layerWillMount = _definition.layerWillMount;
-    }
-    if (typeof _definition.layerDidMount === "function") {
-      this.layerDidMount = _definition.layerDidMount;
-    }
-    if (typeof _definition.layerRender === "function") {
-      this.layerRender = _definition.layerRender;
-    }
-    if (typeof _definition.layerWillUnmount === "function") {
-      this.layerWillUnmount = _definition.layerWillUnmount;
-    }
-    if (typeof _definition.layerDidUnmount === "function") {
-      this.layerDidUnmount = _definition.layerDidUnmount;
-    }
-  }
+    /* Built-in Date */
+    L.stamp(this);
+    this._map = undefined;
+    this._container = undefined;
+    this._bounds = undefined;
+    this._center = undefined;
+    this._zoom = undefined;
+    this._padding = undefined;
+  },
 
-  // Built-in life cycle
-  beforeAdd(map) {
-    this._map = map;
+  /* Built-in Lifecycle */
 
-    // register Events
-    this._registerEvents = false;
-    this._eventType = "";
+  beforeAdd() {
     this._zoomVisible = true;
-
-    // --If the Element instance already exists, simulate a position offset event。
-    // (the map position changes when the layer is removed from the map, and if the layer is added to the map at a time, it will deviate)
-    if (this.getElement()) {
-      this._animateZoom({
-        center: this._map.getCenter(),
-        zoom: this._map.getZoom(),
-        noUpdate: undefined,
-        type: "zoomanim",
-        target: this._map,
-        sourceTarget: this._map
-      });
-    }
-
-    this.layerWillMount && this.layerWillMount.bind(this)();
-  }
+  },
 
   getEvents() {
-    this._registerEvents = true;
     // Layer trigger priority
     // move: movestart -> move -> moveend
     // zoom: zoomstart -> movestart -> zoomanim -> zoom -> move -> zoomend -> moveend
     // resize: move -> resize -> moveend
     let events = {
-      resize: this._onLayerResize,
-      movestart: this._onLayerMovestart,
-      move: this._onLayerMove,
-      moveend: this._onLayerMoveend,
-      zoomstart: this._onLayerZoomstart,
+      viewreset: this._onLayerViewReset,
       zoom: this._onLayerZoom,
-      zoomend: this._onLayerZoomend
+      moveend: this._onLayerMoveEnd,
+      zoomend: this._onLayerZoomEnd
     };
-    if (this._map.options.zoomAnimation && L.Browser.any3d) {
-      events.zoomanim = this._onLayerZoomanim;
+    if (this._zoomAnimated) {
+      events.zoomanim = this._onLayerAnimZoom;
     }
-
     return events;
-  }
+  },
 
-  onAdd(map) {
-    this._map = map;
+  onAdd() {
+    this.fire("layer-beforemount"); // Lifecycle beforeMount
 
-    const el = this.getElement();
-
-    this._addElement(el);
-
-    this.layerDidMount && this.layerDidMount.bind(this)();
-
-    if (!this.options.visible) {
-      this.hide();
+    if (!this._container) {
+      this._initContainer(); // defined by renderer implementations
     }
 
-    this._needRedraw();
-  }
+    this.setOpacity(this.options.opacity);
 
-  onRemove(map) {
-    this.layerWillUnmount && this.layerWillUnmount.bind(this)();
-
-    this._removeElement(this.getElement());
-
-    if (this._registerEvents) {
-      this._registerEvents = false;
-      this._map.off(this.getEvents(), this);
+    if (window.isNaN(this.options.zIndex)) {
+      switch (this._container.tagName) {
+        case "CANVAS": {
+          this.setZIndex(100);
+          break;
+        }
+        case "SVG": {
+          this.setZIndex(200);
+          break;
+        }
+        default: {
+          this.setZIndex(100);
+        }
+      }
+    } else {
+      this.setZIndex(this.options.zIndex);
     }
-    this._map.off({ zoom: this._onZoomVisible }, this);
 
-    this.layerDidUnmount && this.layerDidUnmount.bind(this)();
-  }
+    this.getPane().appendChild(this._container);
 
-  _render() {
-    this.layerRender && this.layerRender.bind(this)();
-    this._frame = null;
-  }
+    this._onZoomVisible();
 
-  // Built-in Event
-  _onLayerResize(event) {
-    if (this._eventType !== "") return;
-    this._eventType = "resize";
-    if (this._eventType !== "resize") return;
-    // resize
-    this._setElementSize(event.newSize);
-    this._setElementPosition();
-    this._render();
+    this.fire("layer-mounted"); // Lifecycle mounted
 
-    this._eventType = "";
-  }
-  _onLayerMovestart(event) {
-    if (this._eventType !== "") return;
-    this._eventType = "move";
-    if (this._eventType !== "move") return;
-    // movestart
-  }
-  _onLayerMove(event) {
-    if (this._eventType !== "move") return;
-    if (!this.options.alwaysRender) return;
-    // move
-    this._setElementPosition();
-    this._render();
-  }
-  _onLayerMoveend(event) {
-    if (this._eventType !== "move") return;
-    // moveend
-    this._setElementPosition();
-    this._render();
+    this._update();
+  },
 
-    this._eventType = "";
-  }
-  _onLayerZoomstart(event) {
-    if (this._eventType !== "") return;
-    this._eventType = "zoom";
-    if (this._eventType !== "zoom") return;
-    // zoomstart
-  }
-  _onLayerZoomanim(event) {
-    if (this._eventType !== "zoom") return;
-    // zoomanim
-    this._animateZoom(event);
-  }
-  _onLayerZoom(event) {
-    if (this._eventType !== "zoom") return;
-    if (!this.options.alwaysRender) return;
-    // zoom
+  onRemove() {
+    this.fire("layer-beforedestroy"); // Lifecycle beforeDestroy
+
+    this._destroyContainer();
+
+    this.fire("layer-destroyed"); // Lifecycle destroyed
+  },
+
+  /* Built-in Events */
+
+  _onLayerViewReset() {
+    this._reset();
+  },
+
+  _onLayerAnimZoom(ev) {
+    this._updateTransform(ev.center, ev.zoom);
+  },
+
+  _onLayerZoom() {
+    this._updateTransform(this._map.getCenter(), this._map.getZoom());
+  },
+
+  _onLayerZoomEnd() {},
+
+  _onLayerMoveEnd() {
     if (!this._isZoomVisible()) {
       this._zoomHide();
-      this._eventType = "";
       return;
     }
 
-    this._setElementPosition();
-    this._render();
-  }
-  _onLayerZoomend(event) {
-    if (this._eventType !== "zoom") return;
-    // zoomend
-    if (!this._isZoomVisible()) {
-      this._zoomHide();
-      this._eventType = "";
-      return;
-    }
+    this._update();
+  },
 
-    this._setElementPosition();
-    this._render();
-
-    this._eventType = "";
-  }
   _onZoomVisible() {
     if (this._isZoomVisible()) {
       this._zoomShow();
     } else {
       this._zoomHide();
     }
-  }
+  },
 
-  // Built-in Methods
-  _needRedraw() {
-    if (!this._frame) {
-      this._frame = L.Util.requestAnimFrame(this._render, this);
+  /* Built-in Methods */
+
+  _initContainer() {
+    const container = (this._container = this.options.container);
+
+    L.DomUtil.addClass(container, "leaflet-layer");
+
+    if (this._zoomAnimated) {
+      L.DomUtil.addClass(this._container, "leaflet-zoom-animated");
     }
-    return this;
-  }
+  },
 
-  _addElement(el) {
-    console.log(el);
-
-    const size = this._map.getSize();
-    this._setElementSize(size);
-
-    this.setOpacity(this.options.opacity);
-    this.setZIndex(this.options.zIndex);
-
-    const animated = this._map.options.zoomAnimation && L.Browser.any3d;
-    L.DomUtil.addClass(el, "leaflet-layer");
-    L.DomUtil.addClass(el, `leaflet-zoom-${animated ? "animated" : "hide"}`);
-
-    if (!this._registerEvents) {
-      this._map.on(this.getEvents(), this);
-    }
-
-    if (!this.options.visible) {
-      this._map.off(this.getEvents(), this);
-      return;
-    }
-
-    this._map.getPanes().overlayPane.appendChild(el);
-  }
-
-  _removeElement(el) {
-    if (this._frame) {
-      L.Util.cancelAnimFrame(this._frame);
-      this._frame = null;
-    }
-
-    try {
-      this._map.getPanes().overlayPane.removeChild(el);
-    } catch (e) {}
-  }
-
-  _setElementSize(size) {
-    const element = this.getElement();
-    element.setAttribute("width", size.x);
-    element.setAttribute("height", size.y);
-    element.style.width = size.x + "px";
-    element.style.height = size.y + "px";
-  }
-  _setElementPosition(point = [0, 0]) {
-    const topLeft = this._map.containerPointToLayerPoint(point);
-    L.DomUtil.setPosition(this.getElement(), topLeft);
-  }
-
-  // L.DomUtil.setTransform stand-in
-  _setTransform(el, offset, scale) {
-    const pos = offset || new L.Point(0, 0);
-
-    el.style[L.DomUtil.TRANSFORM] =
-      (L.Browser.ie3d
-        ? `translate(${pos.x}px, ${pos.y}px)`
-        : `translate3d(${pos.x}px, ${pos.y}px, 0)`) +
-      (scale ? ` scale(${scale})` : "");
-  }
-
-  _animateZoom(e) {
-    let scale = this._map.getZoomScale(e.zoom);
-    // -- different calc of animation zoom  in leaflet 1.0.3 thanks @peterkarabinovic, @jduggan1
-    const offset = L.Layer
-      ? this._map._latLngBoundsToNewLayerBounds(
-          this._map.getBounds(),
-          e.zoom,
-          e.center
-        ).min
-      : this._map
-          ._getCenterOffset(e.center)
-          ._multiplyBy(-scale)
-          .subtract(this._map._getMapPanePos());
-
-    (L.DomUtil.setTransform || this._setTransform)(
-      this.getElement(),
-      offset,
-      scale
-    );
-  }
+  _destroyContainer() {
+    L.DomUtil.remove(this._container);
+    delete this._container;
+  },
 
   _isZoomVisible() {
-    const minZoom = this.options.zooms[0];
-    const maxZoom = this.options.zooms[1];
+    const minZoom = this.options.minZoom;
+    const maxZoom = this.options.maxZoom;
     const zoom = this._map.getZoom();
 
     const isVisible = zoom >= minZoom && zoom <= maxZoom;
 
     return isVisible;
-  }
+  },
 
   _zoomShow() {
     if (this._zoomVisible) return;
     this._zoomVisible = true;
 
-    this._map.off({ zoom: this._onZoomVisible }, this);
+    this._map.off({ zoomend: this._onZoomVisible }, this);
 
     if (!this.options.visible) return;
     this._map.on(this.getEvents(), this);
-    this._map.getPanes().overlayPane.appendChild(this.getElement());
-    this._setElementPosition();
-    this._render();
-  }
+
+    this.getContainer().style.display = "";
+
+    // Subsequent moveend events take the place of update
+    // this._update();
+  },
 
   _zoomHide() {
     if (!this._zoomVisible) return;
     this._zoomVisible = false;
 
     this._map.off(this.getEvents(), this);
-    this._map.on({ zoom: this._onZoomVisible }, this);
+    this._map.on({ zoomend: this._onZoomVisible }, this);
 
-    try {
-      this._map.getPanes().overlayPane.removeChild(this.getElement());
-    } catch (e) {}
-  }
+    this.getContainer().style.display = "none";
+  },
 
-  // API
-  addTo(map) {
-    map.addLayer(this);
+  _updateTransform(center, zoom) {
+    const scale = this._map.getZoomScale(zoom, this._zoom);
+    const position = L.DomUtil.getPosition(this._container);
+    const viewHalf = this._map.getSize().multiplyBy(0.5 + this.options.padding);
+    const currentCenterPoint = this._map.project(this._center, zoom);
+    const destCenterPoint = this._map.project(center, zoom);
+    const centerOffset = destCenterPoint.subtract(currentCenterPoint);
+    const topLeftOffset = viewHalf
+      .multiplyBy(-scale)
+      .add(position)
+      .add(viewHalf)
+      .subtract(centerOffset);
+
+    if (L.Browser.any3d) {
+      L.DomUtil.setTransform(this._container, topLeftOffset, scale);
+    } else {
+      L.DomUtil.setPosition(this._container, topLeftOffset);
+    }
+  },
+
+  _update() {
+    if (this._map._animatingZoom && this._bounds) {
+      return;
+    }
+
+    this.__update();
+
+    let b = this._bounds;
+    let container = this._container;
+
+    L.DomUtil.setPosition(container, b.min);
+
+    this.fire("layer-render"); // Lifecycle render
+  },
+  __update() {
+    // Update pixel bounds of renderer container (for positioning/sizing/clipping later)
+    // Subclasses are responsible of firing the 'update' event.
+    const p = this.options.padding;
+    const size = this._map.getSize();
+    const min = this._map.containerPointToLayerPoint(size.multiplyBy(-p));
+
+    this._padding = size.multiplyBy(-p);
+
+    // this._bounds = new L.Bounds(
+    //   min.round(),
+    //   min.add(size.multiplyBy(1 + p * 2)).round()
+    // );
+    this._bounds = new L.Bounds(min, min.add(size.multiplyBy(1 + p * 2)));
+
+    this._center = this._map.getCenter();
+    this._zoom = this._map.getZoom();
+  },
+
+  _reset() {
+    this._update();
+    this._updateTransform(this._center, this._zoom);
+  },
+
+  /**
+   * API
+   */
+
+  /* Methods */
+
+  getContainer() {
+    return this._container;
+  },
+
+  setContainer(newContainer) {
+    const old = this.getContainer();
+    const parent = old.parentNode;
+
+    delete this._container;
+    this.options.container = newContainer;
+
+    if (!this._container) {
+      this._initContainer();
+    }
+
+    this.setOpacity(this.options.opacity);
+
+    if (window.isNaN(this.options.zIndex)) {
+      switch (this._container.tagName) {
+        case "CANVAS": {
+          this.setZIndex(100);
+          break;
+        }
+        case "SVG": {
+          this.setZIndex(200);
+          break;
+        }
+        default: {
+          this.setZIndex(100);
+        }
+      }
+    } else {
+      this.setZIndex(this.options.zIndex);
+    }
+
+    if (parent) {
+      parent.replaceChild(newContainer, old);
+    } else {
+      this.getPane().appendChild(newContainer);
+    }
+
+    this._update();
+
     return this;
-  }
-
-  getElement() {
-    return this.options.el;
-  }
-
-  setElement(element) {
-    let oldEl = this.getElement();
-    this.options.el = element;
-
-    this._removeElement(oldEl);
-    this._addElement(element);
-
-    this._setElementPosition();
-    this._render();
-    return element;
-  }
+  },
 
   getOpacity() {
     return this.options.opacity;
-  }
+  },
 
   setOpacity(opacity) {
-    this.getElement().style.opacity = this.options.opacity = opacity;
-    return opacity;
-  }
+    this.getContainer().style.opacity = this.options.opacity = opacity * 1;
+    return this;
+  },
 
   getZIndex() {
     return this.options.zIndex;
-  }
+  },
 
   setZIndex(zIndex) {
-    this.getElement().style.zIndex = this.options.zIndex = zIndex;
-    return zIndex;
-  }
+    this.getContainer().style.zIndex = this.options.zIndex = zIndex * 1;
+    return this;
+  },
 
   show() {
     if (this.options.visible) return;
     this.options.visible = true;
 
-    this._map.on({ zoom: this._onZoomVisible }, this);
-    this._onZoomVisible();
-  }
+    if (!this._isZoomVisible()) {
+      this._zoomHide();
+      return;
+    }
+
+    this._map.on(this.getEvents(), this);
+    this.getContainer().style.display = "";
+    this._update();
+
+    return this;
+  },
 
   hide() {
     if (!this.options.visible) return;
     this.options.visible = false;
 
+    this._zoomHide();
+
     this._map.off(this.getEvents(), this);
-    this._map.off({ zoom: this._onZoomVisible }, this);
+    this.getContainer().style.display = "none";
 
-    try {
-      this._map.getPanes().overlayPane.removeChild(this.getElement());
-    } catch (e) {}
+    return this;
   }
-}
 
-function customLayer(definition) {
-  return new CustomLayer(definition);
+  /* Events */
+  // on("layer-beforemount", fn);
+  // on("layer-mounted", fn);
+  // on("layer-render", fn);
+  // on("layer-beforedestroy", fn);
+  // on("layer-destroyed", fn);
+});
+
+// @factory L.customLayer(options?: Renderer options)
+// Creates a CustomLayer renderer with the given options.
+function customLayer(options) {
+  return L.customLayer ? new CustomLayer(options) : null;
 }
 
 /**

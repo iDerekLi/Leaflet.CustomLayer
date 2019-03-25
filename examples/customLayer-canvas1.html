@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Leaflet customLayer-canvas 1.4.0</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"></script>
+  <style>
+    body {
+      margin: 0;
+    }
+    #map {
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<div width="500" height="800" style="background: #000;"></div>
+<script src="../dist/Leaflet.CustomLayer.js"></script>
+
+<script>
+  var map = L.map("map", {
+    zoomAnimation: true
+  }).setView([37.68, 116.25], 3);
+
+  L.tileLayer("https://{s}.tiles.mapbox.com/v4/mapbox.dark/{z}/{x}/{y}@2x.png?access_token=pk.eyJ1IjoiZ2xlYWZsZXQiLCJhIjoiY2lxdWxoODl0MDA0M2h4bTNlZ2I1Z3gycyJ9.vrEWCC2nwsGfAYKZ7c4HZA")
+    .addTo(map);
+
+  var canvasLayer = new L.CustomLayer({
+    container: document.createElement("canvas"),
+    padding: 0.1,
+    opacity: 1,
+    visible: true,
+    minZoom: 0,
+    maxZoom: 18
+  });
+
+  var drawCanvas1 = function () {
+    var canvas = this.getContainer();
+
+    var retina = L.Browser.retina;
+    var size = map.getSize();//resize
+    var width = size.x;
+    var height = size.y;
+    canvas.style.width = width+'px'
+    canvas.style.height = height+'px'
+    if(retina){//高清适配
+      width*=2;
+      height*=2;
+    }
+    canvas.width = width;
+    canvas.height = height;//清除画布
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = '#0F0';
+    ctx.strokeStyle = '#fff';
+    ctx.beginPath();
+
+    var positions = [
+      {
+        center: {
+          lat: 37.68,
+          lng: 116.25
+        },
+        radius: 30
+      }
+    ];
+
+    for (var i = 0; i < positions.length; i += 1) {
+      var center = positions[i].center;
+      var pos = map.latLngToContainerPoint(center);
+      var r = positions[i].radius;
+
+      if(retina){
+        pos = pos.multiplyBy(2);
+        r*=2
+      }
+      ctx.moveTo(pos.x+r, pos.y)
+      ctx.arc(pos.x, pos.y, r, 0, 2*Math.PI);
+    }
+    ctx.lineWidth = retina?18:9
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+  };
+
+  var drawCanvas2 = function () {
+    var canvas = this._container;
+
+    var m = L.Browser.retina ? 2 : 1;
+
+    var size = this._bounds.getSize();//resize
+
+    var padding = this._padding;
+    canvas.width = m * size.x;
+    canvas.height = m * size.y;
+    canvas.style.width = size.x + "px";
+    canvas.style.height = size.y + "px";
+
+    var ctx = canvas.getContext("2d");
+    if (L.Browser.retina) {
+      ctx.scale(m, m);
+    }
+
+    ctx.translate(-padding.x, -padding.y);
+
+    ctx.fillStyle = '#0F0';
+    ctx.strokeStyle = '#fff';
+    ctx.beginPath();
+
+    var positions = [
+      {
+        center: {
+          lat: 37.68,
+          lng: 116.25
+        },
+        radius: 30
+      }
+    ];
+
+    for (var i = 0; i < positions.length; i += 1) {
+      var center = positions[i].center;
+      var pos = map.latLngToContainerPoint(center);
+      var r = positions[i].radius;
+
+      ctx.moveTo(pos.x+r, pos.y)
+      ctx.arc(pos.x, pos.y, r, 0, 2*Math.PI);
+    }
+    ctx.lineWidth = 9
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+
+  };
+
+  canvasLayer.on("layer-beforemount", function() {
+    console.log("layer-beforemount");
+  });
+
+  canvasLayer.on("layer-mounted", function() {
+    console.log("layer-mounted");
+  });
+
+  canvasLayer.on("layer-render", function() {
+    console.log("layer-render");
+    drawCanvas2.bind(this)();
+  });
+
+  canvasLayer.on("layer-beforedestroy", function() {
+    console.log("layer-beforedestroy");
+  });
+
+  canvasLayer.on("layer-destroyed", function() {
+    console.log("layer-destroyed");
+  });
+
+  canvasLayer.addTo(map);
+</script>
+</body>
+</html>
