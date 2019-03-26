@@ -1,15 +1,15 @@
 /*!
- * Leaflet.CustomLayer.js v2.0.0
+ * Leaflet.CustomLayer.js v2.1.0
  * 
  * Copyright (c) 2019-present Derek Li
  * Released under the MIT License - https://choosealicense.com/licenses/mit/
  * 
  * https://github.com/iDerekLi/Leaflet.CustomLayer
  */
-!function(t, i) {
-    "object" == typeof exports && "undefined" != typeof module ? i(exports, require("leaflet")) : "function" == typeof define && define.amd ? define([ "exports", "leaflet" ], i) : i(((t = t || self).Leaflet = t.Leaflet || {}, 
+!function(t, e) {
+    "object" == typeof exports && "undefined" != typeof module ? e(exports, require("leaflet")) : "function" == typeof define && define.amd ? define([ "exports", "leaflet" ], e) : e(((t = t || self).Leaflet = t.Leaflet || {}, 
     t.Leaflet.CustomLayer = {}), t.L);
-}(this, function(t, i) {
+}(this, function(t, e) {
     "use strict";
     /**
    * @class CustomLayer
@@ -17,7 +17,7 @@
    *
    * Leaflet overlay plugin: L.CustomLayer - fully custom Layer.
    */
-    var e = (i = i && i.hasOwnProperty("default") ? i["default"] : i).Layer.extend({
+    var i = (e = e && e.hasOwnProperty("default") ? e["default"] : e).Layer.extend({
         // CustomLayer options
         options: {
             // How much to extend the clip area around the map view (relative to its size)
@@ -39,9 +39,9 @@
             maxZoom: 18
         },
         initialize: function initialize(t) {
-            i.setOptions(this, t), 
+            e.setOptions(this, t), 
             /* Built-in Date */
-            i.stamp(this), this._map = undefined, this._container = undefined, this._bounds = undefined, 
+            e.stamp(this), this._map = undefined, this._container = undefined, this._bounds = undefined, 
             this._center = undefined, this._zoom = undefined, this._padding = undefined;
         },
         /* Built-in Lifecycle */
@@ -65,11 +65,13 @@
             if (this.fire("layer-beforemount"), // Lifecycle beforeMount
             this._container || this._initContainer(), this.setOpacity(this.options.opacity), 
             window.isNaN(this.options.zIndex)) switch (this._container.tagName) {
-              case "CANVAS":
+              // http://www.w3.org/1999/xhtml
+                case "CANVAS":
                 this.setZIndex(100);
                 break;
 
-              case "SVG":
+ // http://www.w3.org/2000/svg
+                              case "svg":
                 this.setZIndex(200);
                 break;
 
@@ -104,14 +106,14 @@
         /* Built-in Methods */
         _initContainer: function _initContainer() {
             var t = this._container = this.options.container;
-            i.DomUtil.addClass(t, "leaflet-layer"), this._zoomAnimated && i.DomUtil.addClass(this._container, "leaflet-zoom-animated");
+            e.DomUtil.addClass(t, "leaflet-layer"), this._zoomAnimated && e.DomUtil.addClass(this._container, "leaflet-zoom-animated");
         },
         _destroyContainer: function _destroyContainer() {
-            i.DomUtil.remove(this._container), delete this._container;
+            e.DomUtil.remove(this._container), delete this._container;
         },
         _isZoomVisible: function _isZoomVisible() {
-            var t = this.options.minZoom, i = this.options.maxZoom, e = this._map.getZoom();
-            return e >= t && e <= i;
+            var t = this.options.minZoom, e = this.options.maxZoom, i = this._map.getZoom();
+            return i >= t && i <= e;
         },
         _zoomShow: function _zoomShow() {
             this._zoomVisible || (this._zoomVisible = !0, this._map.off({
@@ -124,26 +126,26 @@
                 zoomend: this._onZoomVisible
             }, this), this.getContainer().style.display = "none");
         },
-        _updateTransform: function _updateTransform(t, e) {
-            var o = this._map.getZoomScale(e, this._zoom), n = i.DomUtil.getPosition(this._container), s = this._map.getSize().multiplyBy(.5 + this.options.padding), a = this._map.project(this._center, e), r = this._map.project(t, e).subtract(a), h = s.multiplyBy(-o).add(n).add(s).subtract(r);
-            i.Browser.any3d ? i.DomUtil.setTransform(this._container, h, o) : i.DomUtil.setPosition(this._container, h);
+        _updateTransform: function _updateTransform(t, i) {
+            var o = this._map.getZoomScale(i, this._zoom), n = e.DomUtil.getPosition(this._container), s = this._map.getSize().multiplyBy(.5 + this.options.padding), a = this._map.project(this._center, i), r = this._map.project(t, i).subtract(a), h = s.multiplyBy(-o).add(n).add(s).subtract(r);
+            e.Browser.any3d ? e.DomUtil.setTransform(this._container, h, o) : e.DomUtil.setPosition(this._container, h);
         },
         _update: function _update() {
             if (!this._map._animatingZoom || !this._bounds) {
                 this.__update();
-                var t = this._bounds, e = this._container;
-                i.DomUtil.setPosition(e, t.min), this.fire("layer-render");
+                var t = this._bounds, i = this._container;
+                e.DomUtil.setPosition(i, t.min), this.fire("layer-render");
             }
         },
         __update: function __update() {
             // Update pixel bounds of renderer container (for positioning/sizing/clipping later)
             // Subclasses are responsible of firing the 'update' event.
-            var t = this.options.padding, e = this._map.getSize(), o = this._map.containerPointToLayerPoint(e.multiplyBy(-t));
-            this._padding = e.multiplyBy(-t), // this._bounds = new L.Bounds(
+            var t = this.options.padding, i = this._map.getSize(), o = this._map.containerPointToLayerPoint(i.multiplyBy(-t));
+            this._padding = i.multiplyBy(t), // this._bounds = new L.Bounds(
             //   min.round(),
             //   min.add(size.multiplyBy(1 + p * 2)).round()
             // );
-            this._bounds = new i.Bounds(o, o.add(e.multiplyBy(1 + 2 * t))), this._center = this._map.getCenter(), 
+            this._bounds = new e.Bounds(o, o.add(i.multiplyBy(1 + 2 * t))), this._center = this._map.getCenter(), 
             this._zoom = this._map.getZoom();
         },
         _reset: function _reset() {
@@ -157,21 +159,21 @@
             return this._container;
         },
         setContainer: function setContainer(t) {
-            var i = this.getContainer(), e = i.parentNode;
+            var e = this.getContainer(), i = e.parentNode;
             if (delete this._container, this.options.container = t, this._container || this._initContainer(), 
             this.setOpacity(this.options.opacity), window.isNaN(this.options.zIndex)) switch (this._container.tagName) {
               case "CANVAS":
                 this.setZIndex(100);
                 break;
 
-              case "SVG":
+              case "svg":
                 this.setZIndex(200);
                 break;
 
               default:
                 this.setZIndex(100);
             } else this.setZIndex(this.options.zIndex);
-            return e ? e.replaceChild(t, i) : this.getPane().appendChild(t), this._update(), 
+            return i ? i.replaceChild(t, e) : this.getPane().appendChild(t), this._update(), 
             this;
         },
         getOpacity: function getOpacity() {
@@ -196,6 +198,39 @@
         hide: function hide() {
             if (this.options.visible) return this.options.visible = !1, this._zoomHide(), this._map.off(this.getEvents(), this), 
             this.getContainer().style.display = "none", this;
+        },
+        setFullLayerBounds: function setFullLayerBounds() {
+            var t = this.getContainer(), i = this._bounds.getSize(), o = this._padding;
+            switch (t.tagName) {
+              case "CANVAS":
+                var n = e.Browser.retina ? 2 : 1;
+                t.width = n * i.x, t.height = n * i.y, t.style.width = i.x + "px", t.style.height = i.y + "px";
+                var s = t.getContext("2d");
+                return e.Browser.retina && s.scale(n, n), s.translate(o.x, o.y), {
+                    container: t,
+                    ctx: s,
+                    dpr: n
+                };
+
+              case "svg":
+                return t.setAttribute("width", i.x), t.setAttribute("height", i.y), t.style.width = i.x + "px", 
+                t.style.height = i.y + "px", t.setAttribute("viewBox", "".concat(-o.x, " ").concat(-o.y, " ").concat(i.x, " ").concat(i.y)), 
+                {
+                    container: t
+                };
+
+              case "DIV":
+                return t.style.boxSizing = "content-box", t.style.width = i.x - o.x + "px", t.style.height = i.y - o.y + "px", 
+                t.style.padding = "".concat(o.y, "px ").concat(o.x, "px"), {
+                    container: t
+                };
+
+              default:
+                return t.setAttribute("width", i.x), t.setAttribute("height", i.y), t.style.width = i.x + "px", 
+                t.style.height = i.y + "px", {
+                    container: t
+                };
+            }
         }
         /* Events */
         // on("layer-beforemount", fn);
@@ -207,11 +242,11 @@
  // @factory L.customLayer(options?: Renderer options)
     // Creates a CustomLayer renderer with the given options.
         function customLayer(t) {
-        return i.customLayer ? new e(t) : null;
+        return e.customLayer ? new i(t) : null;
     }
     /**
    * Plugin Props
-   */    i.CustomLayer = e, i.customLayer = customLayer, t.CustomLayer = e, t.customLayer = customLayer, 
+   */    e.CustomLayer = i, e.customLayer = customLayer, t.CustomLayer = i, t.customLayer = customLayer, 
     t["default"] = customLayer, Object.defineProperty(t, "__esModule", {
         value: !0
     });

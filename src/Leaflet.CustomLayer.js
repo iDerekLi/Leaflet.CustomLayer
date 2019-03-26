@@ -85,11 +85,13 @@ const CustomLayer = L.Layer.extend({
 
     if (window.isNaN(this.options.zIndex)) {
       switch (this._container.tagName) {
+        // http://www.w3.org/1999/xhtml
         case "CANVAS": {
           this.setZIndex(100);
           break;
         }
-        case "SVG": {
+        // http://www.w3.org/2000/svg
+        case "svg": {
           this.setZIndex(200);
           break;
         }
@@ -244,7 +246,7 @@ const CustomLayer = L.Layer.extend({
     const size = this._map.getSize();
     const min = this._map.containerPointToLayerPoint(size.multiplyBy(-p));
 
-    this._padding = size.multiplyBy(-p);
+    this._padding = size.multiplyBy(p);
 
     // this._bounds = new L.Bounds(
     //   min.round(),
@@ -290,7 +292,7 @@ const CustomLayer = L.Layer.extend({
           this.setZIndex(100);
           break;
         }
-        case "SVG": {
+        case "svg": {
           this.setZIndex(200);
           break;
         }
@@ -357,6 +359,55 @@ const CustomLayer = L.Layer.extend({
     this.getContainer().style.display = "none";
 
     return this;
+  },
+
+  setFullLayerBounds() {
+    const container = this.getContainer();
+    const size = this._bounds.getSize();
+    const padding = this._padding;
+
+    switch (container.tagName) {
+      case "CANVAS": {
+        const dpr = L.Browser.retina ? 2 : 1;
+        container.width = dpr * size.x;
+        container.height = dpr * size.y;
+        container.style.width = size.x + "px";
+        container.style.height = size.y + "px";
+
+        const ctx = container.getContext("2d");
+        if (L.Browser.retina) ctx.scale(dpr, dpr);
+        ctx.translate(padding.x, padding.y);
+
+        return { container, ctx, dpr };
+      }
+      case "svg": {
+        container.setAttribute("width", size.x);
+        container.setAttribute("height", size.y);
+        container.style.width = size.x + "px";
+        container.style.height = size.y + "px";
+        container.setAttribute(
+          "viewBox",
+          `${-padding.x} ${-padding.y} ${size.x} ${size.y}`
+        );
+
+        return { container };
+      }
+      case "DIV": {
+        container.style.boxSizing = "content-box";
+        container.style.width = size.x - padding.x + "px";
+        container.style.height = size.y - padding.y + "px";
+        container.style.padding = `${padding.y}px ${padding.x}px`;
+
+        return { container };
+      }
+      default: {
+        container.setAttribute("width", size.x);
+        container.setAttribute("height", size.y);
+        container.style.width = size.x + "px";
+        container.style.height = size.y + "px";
+        return { container };
+      }
+    }
   }
 
   /* Events */

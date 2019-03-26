@@ -33,7 +33,7 @@ $ yarn add leaflet-customlayer
 Using cdn:
 
 ```html
-<script type="text/javascript" src="https://unpkg.com/leaflet-customlayer@2.0.0/dist/Leaflet.CustomLayer.js"></script>
+<script type="text/javascript" src="https://unpkg.com/leaflet-customlayer@2.1.0/dist/Leaflet.CustomLayer.js"></script>
 ```
 
 ## Example
@@ -71,6 +71,68 @@ customLayer.on("layer-destroyed", function() {
 customLayer.addTo(map);
 ```
 
+**Custom canvas layer example**
+
+```javascript
+var canvasLayer = new L.CustomLayer({
+  container: document.createElement("canvas"),
+  padding: 0.1
+});
+
+canvasLayer.on("layer-render", function() {
+  var canvas = this.getContainer();
+  var dpr = L.Browser.retina ? 2 : 1;
+  var size = this._bounds.getSize();
+  var padding = this._padding;
+
+  // set Size
+  canvas.width = dpr * size.x;
+  canvas.height = dpr * size.y;
+  canvas.style.width = size.x + "px";
+  canvas.style.height = size.y + "px";
+    
+  var ctx = canvas.getContext("2d");
+
+  // HD adaptation
+  if (L.Browser.retina) ctx.scale(dpr, dpr);
+  ctx.translate(padding.x, padding.y);
+  
+  // draw
+  var point = this._map.latLngToContainerPoint({
+    lat: 39.910088,
+    lng: 116.401601
+  });
+  ctx.fillStyle = 'rgb(0,100,255)';
+  ctx.fillRect(point.x, point.y, 100, 100);
+});
+```
+
+**setFullLayerBounds util usage**
+
+Automatically set the full screen container size using the setfulllayerBounds method.
+
+```javascript
+var canvasLayer = new L.CustomLayer({
+  container: document.createElement("canvas"),
+  padding: 0.1
+});
+
+canvasLayer.on("layer-render", function() {
+  var { ctx } = this.setFullLayerBounds();
+
+  // draw
+  var point = this._map.latLngToContainerPoint({
+    lat: 39.910088,
+    lng: 116.401601
+  });
+  ctx.fillStyle = 'rgb(0,100,255)';
+  ctx.fillRect(point.x, point.y, 100, 100);
+});
+```
+
+The `setfulllayerBounds` method can automatically set the `container` size. However, due to conditional restrictions, when it is not satisfied with the usage scenario, manually set the `container` size.
+
+
 ## API
 
 ### CustomLayer
@@ -105,6 +167,12 @@ Leaflet overlay plugin: L.CustomLayer - fully custom Layer. Extends [Layer](http
 | show() | layer show | this |
 | hide() | layer hide | this |
 
+#### Util Methods
+
+| Method | Description | Return |
+| :------ | :------ | :------ |
+| setFullLayerBounds() | set the full bounds of the layer. | { container, [...] } |
+
 #### Events
 
 | Event | Data | Description |
@@ -117,4 +185,4 @@ Leaflet overlay plugin: L.CustomLayer - fully custom Layer. Extends [Layer](http
 
 ## License
 
-MIT
+[MIT](https://choosealicense.com/licenses/mit/)
