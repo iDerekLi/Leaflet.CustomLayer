@@ -18,7 +18,7 @@
 <body>
 <div id="map"></div>
 <div width="500" height="800" style="background: #000;"></div>
-<script src="../dist/Leaflet.CustomLayer.js"></script>
+<script src="../../dist/Leaflet.CustomLayer.js"></script>
 
 <script>
   var map = L.map("map", {
@@ -37,20 +37,21 @@
     maxZoom: 18
   });
 
-  var drawCanvas1 = function() {
+  var drawCanvas1 = function () {
     var canvas = this.getContainer();
+
     var retina = L.Browser.retina;
-    var size = map.getSize(); // resize
+    var size = map.getSize();
     var width = size.x;
     var height = size.y;
     canvas.style.width = width+'px'
     canvas.style.height = height+'px'
-    if(retina){ // retina
+    if(retina){
       width*=2;
       height*=2;
     }
     canvas.width = width;
-    canvas.height = height;//清除画布
+    canvas.height = height; // clear canvas
     var ctx = canvas.getContext("2d");
     ctx.fillStyle = '#0F0';
     ctx.strokeStyle = '#fff';
@@ -59,8 +60,8 @@
     var positions = [
       {
         center: {
-          lat: 37.68,
-          lng: 116.25
+          lat: 39.910088,
+          lng: 116.401601
         },
         radius: 30
       }
@@ -84,25 +85,15 @@
     ctx.fill();
   };
 
-  var drawCanvas2 = function() {
-    var canvas = this.getContainer();
+  var drawCanvas2 = function () {
+    var { ctx } = this.setFullLayerBounds();
 
-    var dpr = L.Browser.retina ? 2 : 1;
-
-    var size = this._bounds.getSize(); // resize
-
-    var padding = this._padding;
-    canvas.width = dpr * size.x;
-    canvas.height = dpr * size.y;
-    canvas.style.width = size.x + "px";
-    canvas.style.height = size.y + "px";
-
-    var ctx = canvas.getContext("2d");
-    if (L.Browser.retina) {
-      ctx.scale(dpr, dpr);
-    }
-
-    ctx.translate(padding.x, padding.y);
+    var point = map.latLngToContainerPoint({
+      lat: 39.910088,
+      lng: 116.401601
+    })
+    ctx.fillStyle = 'rgb(0,100,255)';
+    ctx.fillRect(point.x, point.y, 100, 100);
 
     ctx.fillStyle = '#0F0';
     ctx.strokeStyle = '#fff';

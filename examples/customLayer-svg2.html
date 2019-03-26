@@ -36,7 +36,7 @@
 <script>
   var map = L.map("map", {
     zoomAnimation: true
-  }).setView([36.8, 108.34], 4);
+  }).setView([39.910088, 116.401601], 4);
 
   L.tileLayer("https://{s}.tiles.mapbox.com/v4/mapbox.dark/{z}/{x}/{y}@2x.png?access_token=pk.eyJ1IjoiZ2xlYWZsZXQiLCJhIjoiY2lxdWxoODl0MDA0M2h4bTNlZ2I1Z3gycyJ9.vrEWCC2nwsGfAYKZ7c4HZA")
     .addTo(map);
@@ -52,75 +52,65 @@
     return el;
   }
 
-  let data = lines;
+  let data = lines; // data
 
-  function addItem() {
-    let g = svgDOMUtil("g");
+  function addLineItem() {
+    const g = this.svgDOMUtil("g");
 
-    let path = svgDOMUtil("path");
-    L.DomUtil.addClass(path, "leaflet-ant-path");
-    path.setAttribute("stroke-linecap", "round");
-    path.setAttribute("stroke", "#F7EB0A");
-    path.setAttribute("stroke-dasharray", "4, 6");
-    path.setAttribute("stroke-width", 3);
-    path.setAttribute("fill", "none");
-    path.setAttribute("d", "");
-    path.style["animation-duration"] = "100s";
+    const path = this.svgDOMUtil("path", {
+      class: "leaflet-ant-path",
+      style: "animation-duration: 100s;",
+      stroke: "#f7eb0a",
+      "stroke-width": 3,
+      "stroke-linecap": "round",
+      "stroke-dasharray": "4, 6",
+      fill: "none",
+      d: ""
+    });
 
-    let arrow = svgDOMUtil("polygon");
-    arrow.setAttribute("stroke", "none");
-    arrow.setAttribute("fill", "#F7EB0A");
-    arrow.setAttribute("stroke-width", 0);
-    arrow.setAttribute("points", "");
-    arrow.setAttribute("transform", "");
+    const arrow = this.svgDOMUtil("polygon", {
+      stroke: "none",
+      "stroke-width": 0,
+      fill: "#f7eb0a",
+      points: "",
+      transform: ""
+    });
 
     g.appendChild(path);
     g.appendChild(arrow);
 
-    return {
-      g,
-      path,
-      arrow
-    };
-  }
+    return { g, path, arrow };
+  };
 
-  function getLinePath(d, option) {
-    let p1 = this._map.latLngToContainerPoint({
-      lat: d.coords[0][1],
-      lng: d.coords[0][0]
-    });
-    let p2 = this._map.latLngToContainerPoint({
-      lat: d.coords[1][1],
-      lng: d.coords[1][0]
-    });
+  function getLinePathData(latlng1, latlng2, q) {
+    const p1 = this._map.latLngToContainerPoint(latlng1);
+    const p2 = this._map.latLngToContainerPoint(latlng2);
 
-    let L = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-    let zx = p1.x - L / option.q;
-    let zy = p1.y - L / 2;
-    let angle = (Math.PI / 180) * 90 + Math.atan2(p2.y - p1.y, p2.x - p1.x);
-    let qx =
+    const L = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+    const zx = p1.x - L / q;
+    const zy = p1.y - L / 2;
+    const angle = (Math.PI / 180) * 90 + Math.atan2(p2.y - p1.y, p2.x - p1.x);
+    const qx =
       (zx - p1.x) * Math.cos(angle) - (zy - p1.y) * Math.sin(angle) + p1.x;
-    let qy =
+    const qy =
       (zx - p1.x) * Math.sin(angle) + (zy - p1.y) * Math.cos(angle) + p1.y;
-    let arrawangle =
+    const arrawangle =
       Math.atan2(qy - p2.y, qx - p2.x) - (Math.PI / 180) * 90;
     return {
       linepath: `M${p1.x},${p1.y} Q${qx},${qy} ${p2.x},${p2.y}`,
-      arrowpath: `${p2.x},${p2.y - 9} ${p2.x + 5},${p2.y + 5} ${
-        p2.x
-        },${p2.y + 2} ${p2.x - 5},${p2.y + 5}`,
+      arrowpath: `${p2.x},${p2.y - 9} ${p2.x + 5},${p2.y + 5} ${p2.x},${p2.y +
+      2} ${p2.x - 5},${p2.y + 5}`,
       rotate: `rotate(${(arrawangle * 180) / Math.PI},${p2.x},${p2.y})`
     };
   }
 
-  var canvasLayer = L.customLayer({
-    container: document.createElementNS("http://www.w3.org/2000/svg", "svg"),
-    opacity: 1,
-    visible: true,
-    zIndex: 120
+  var svgLayer = L.customLayer({
+    container: svgDOMUtil("svg"),
+    padding: 0.1,
+    opacity: 1
   });
 
-  canvasLayer.on("layer-beforemount", function() {
+  svgLayer.on("layer-beforemount", function() {
     console.log("layer-beforemount");
 
     this.group = svgDOMUtil("g");
@@ -128,32 +118,33 @@
   });
 
 
-  canvasLayer.on("layer-mounted", function() {
+  svgLayer.on("layer-mounted", function() {
     console.log("layer-mounted");
 
     this.getContainer().appendChild(this.group);
 
     data.forEach((item, index) => {
-      let $item = addItem(item, index);
+      let $item = addLineItem(item, index);
       this.source[index] = $item;
       this.group.appendChild($item.g);
     });
   });
 
-  canvasLayer.on("layer-render", function() {
+  svgLayer.on("layer-render", function() {
     console.log("layer-render");
 
     const container = this.getContainer();
     var size = this._bounds.getSize(); // resize
+    var padding = this._padding;
 
     container.setAttribute("width", size.x);
     container.setAttribute("height", size.y);
     container.style.width = size.x + "px";
     container.style.height = size.y + "px";
-    container.setAttribute("viewBox", `0 0 ${size.x} ${size.y}`);
+    container.setAttribute("viewBox", `${-padding.x} ${-padding.y} ${size.x} ${size.y}`);
 
     data.forEach((item, index) => {
-      const d = getLinePath.bind(this)(item, { q: item.value });
+      const d = getLinePathData.bind(this)(item.coords[0], item.coords[1], item.value);
 
       let $item = this.source[index];
       $item.path.setAttribute("d", d.linepath);
@@ -162,15 +153,15 @@
     });
   });
 
-  canvasLayer.on("layer-beforedestroy", function() {
+  svgLayer.on("layer-beforedestroy", function() {
     console.log("layer-beforedestroy");
   });
 
-  canvasLayer.on("layer-destroyed", function() {
+  svgLayer.on("layer-destroyed", function() {
     console.log("layer-destroyed");
   });
 
-  canvasLayer.addTo(map);
+  svgLayer.addTo(map);
 </script>
 </body>
 </html>

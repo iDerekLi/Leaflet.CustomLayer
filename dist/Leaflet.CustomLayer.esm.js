@@ -1,5 +1,5 @@
 /*!
- * Leaflet.CustomLayer.js v2.0.0
+ * Leaflet.CustomLayer.js v2.1.0
  * 
  * Copyright (c) 2019-present Derek Li
  * Released under the MIT License - https://choosealicense.com/licenses/mit/
@@ -61,11 +61,13 @@ import t from "leaflet";
         if (this.fire("layer-beforemount"), // Lifecycle beforeMount
         this._container || this._initContainer(), this.setOpacity(this.options.opacity), 
         window.isNaN(this.options.zIndex)) switch (this._container.tagName) {
-          case "CANVAS":
+          // http://www.w3.org/1999/xhtml
+            case "CANVAS":
             this.setZIndex(100);
             break;
 
-          case "SVG":
+ // http://www.w3.org/2000/svg
+                      case "svg":
             this.setZIndex(200);
             break;
 
@@ -121,8 +123,8 @@ import t from "leaflet";
         }, this), this.getContainer().style.display = "none");
     },
     _updateTransform: function _updateTransform(i, e) {
-        var o = this._map.getZoomScale(e, this._zoom), n = t.DomUtil.getPosition(this._container), s = this._map.getSize().multiplyBy(.5 + this.options.padding), a = this._map.project(this._center, e), h = this._map.project(i, e).subtract(a), r = s.multiplyBy(-o).add(n).add(s).subtract(h);
-        t.Browser.any3d ? t.DomUtil.setTransform(this._container, r, o) : t.DomUtil.setPosition(this._container, r);
+        var o = this._map.getZoomScale(e, this._zoom), n = t.DomUtil.getPosition(this._container), s = this._map.getSize().multiplyBy(.5 + this.options.padding), a = this._map.project(this._center, e), r = this._map.project(i, e).subtract(a), h = s.multiplyBy(-o).add(n).add(s).subtract(r);
+        t.Browser.any3d ? t.DomUtil.setTransform(this._container, h, o) : t.DomUtil.setPosition(this._container, h);
     },
     _update: function _update() {
         if (!this._map._animatingZoom || !this._bounds) {
@@ -135,7 +137,7 @@ import t from "leaflet";
         // Update pixel bounds of renderer container (for positioning/sizing/clipping later)
         // Subclasses are responsible of firing the 'update' event.
         var i = this.options.padding, e = this._map.getSize(), o = this._map.containerPointToLayerPoint(e.multiplyBy(-i));
-        this._padding = e.multiplyBy(-i), // this._bounds = new L.Bounds(
+        this._padding = e.multiplyBy(i), // this._bounds = new L.Bounds(
         //   min.round(),
         //   min.add(size.multiplyBy(1 + p * 2)).round()
         // );
@@ -160,7 +162,7 @@ import t from "leaflet";
             this.setZIndex(100);
             break;
 
-          case "SVG":
+          case "svg":
             this.setZIndex(200);
             break;
 
@@ -192,6 +194,39 @@ import t from "leaflet";
     hide: function hide() {
         if (this.options.visible) return this.options.visible = !1, this._zoomHide(), this._map.off(this.getEvents(), this), 
         this.getContainer().style.display = "none", this;
+    },
+    setFullLayerBounds: function setFullLayerBounds() {
+        var i = this.getContainer(), e = this._bounds.getSize(), o = this._padding;
+        switch (i.tagName) {
+          case "CANVAS":
+            var n = t.Browser.retina ? 2 : 1;
+            i.width = n * e.x, i.height = n * e.y, i.style.width = e.x + "px", i.style.height = e.y + "px";
+            var s = i.getContext("2d");
+            return t.Browser.retina && s.scale(n, n), s.translate(o.x, o.y), {
+                container: i,
+                ctx: s,
+                dpr: n
+            };
+
+          case "svg":
+            return i.setAttribute("width", e.x), i.setAttribute("height", e.y), i.style.width = e.x + "px", 
+            i.style.height = e.y + "px", i.setAttribute("viewBox", "".concat(-o.x, " ").concat(-o.y, " ").concat(e.x, " ").concat(e.y)), 
+            {
+                container: i
+            };
+
+          case "DIV":
+            return i.style.boxSizing = "content-box", i.style.width = e.x - o.x + "px", i.style.height = e.y - o.y + "px", 
+            i.style.padding = "".concat(o.y, "px ").concat(o.x, "px"), {
+                container: i
+            };
+
+          default:
+            return i.setAttribute("width", e.x), i.setAttribute("height", e.y), i.style.width = e.x + "px", 
+            i.style.height = e.y + "px", {
+                container: i
+            };
+        }
     }
     /* Events */
     // on("layer-beforemount", fn);
