@@ -102,9 +102,11 @@ canvasLayer.on("layer-render", function() {
     lat: 39.910088,
     lng: 116.401601
   });
-  ctx.fillStyle = 'rgb(0,100,255)';
+  ctx.fillStyle = "rgb(0, 100, 255)";
   ctx.fillRect(point.x, point.y, 100, 100);
 });
+
+canvasLayer.addTo(map);
 ```
 
 **setFullLayerBounds util usage**
@@ -125,9 +127,11 @@ canvasLayer.on("layer-render", function() {
     lat: 39.910088,
     lng: 116.401601
   });
-  ctx.fillStyle = 'rgb(0,100,255)';
+  ctx.fillStyle = "rgb(0, 100, 255)";
   ctx.fillRect(point.x, point.y, 100, 100);
 });
+
+canvasLayer.addTo(map);
 ```
 
 The `setfulllayerBounds` method can automatically set the `container` size. However, due to conditional restrictions, when it is not satisfied with the usage scenario, manually set the `container` size.
@@ -137,7 +141,7 @@ The `setfulllayerBounds` method can automatically set the `container` size. Howe
 
 ### CustomLayer
 
-Leaflet overlay plugin: L.CustomLayer - fully custom Layer. Extends [Layer](https://leafletjs.com/reference-1.4.0.html#layer).
+Leaflet overlay plugin: L.CustomLayer - fully custom Layer. Extends [L.Layer](https://leafletjs.com/reference-1.4.0.html#layer).
 
 #### Options
 
